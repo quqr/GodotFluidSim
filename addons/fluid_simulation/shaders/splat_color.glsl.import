@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://byuqm2c8ujpp4"
+path="res://.godot/imported/splat_color.glsl-807f20a9605869b5c65a8fb9ae062100.res"
+
+[deps]
+
+source_file="res://addons/fluid_simulation/shaders/splat_color.glsl"
+dest_files=["res://.godot/imported/splat_color.glsl-807f20a9605869b5c65a8fb9ae062100.res"]
+
+[params]
+

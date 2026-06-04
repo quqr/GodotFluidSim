@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://c50k16o7onqrk"
+path="res://.godot/imported/vorticity.glsl-96af9abc9633ab2d707ad52466097d7c.res"
+
+[deps]
+
+source_file="res://addons/fluid_simulation/shaders/vorticity.glsl"
+dest_files=["res://.godot/imported/vorticity.glsl-96af9abc9633ab2d707ad52466097d7c.res"]
+
+[params]
+

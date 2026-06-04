@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://b0kuajc3d361t"
+path="res://.godot/imported/shift_texture.glsl-79a742fcd8ead07084dbebbfc3697b6e.res"
+
+[deps]
+
+source_file="res://addons/fluid_simulation/shaders/shift_texture.glsl"
+dest_files=["res://.godot/imported/shift_texture.glsl-79a742fcd8ead07084dbebbfc3697b6e.res"]
+
+[params]
+

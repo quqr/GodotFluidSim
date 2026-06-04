@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://cpe5ditpt2lqk"
+path="res://.godot/imported/splat_batch.glsl-4ef5a2b6641b90613992fdd595ef0361.res"
+
+[deps]
+
+source_file="res://addons/fluid_simulation/shaders/splat_batch.glsl"
+dest_files=["res://.godot/imported/splat_batch.glsl-4ef5a2b6641b90613992fdd595ef0361.res"]
+
+[params]
+

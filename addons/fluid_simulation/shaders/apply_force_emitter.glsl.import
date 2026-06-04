@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://1r34m7thx6nu"
+path="res://.godot/imported/apply_force_emitter.glsl-0fcb4e86803cd30db764013021e6f64d.res"
+
+[deps]
+
+source_file="res://addons/fluid_simulation/shaders/apply_force_emitter.glsl"
+dest_files=["res://.godot/imported/apply_force_emitter.glsl-0fcb4e86803cd30db764013021e6f64d.res"]
+
+[params]
+
