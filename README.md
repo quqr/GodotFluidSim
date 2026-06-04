@@ -1,6 +1,8 @@
 # LiquidSim - 2D 流体模拟插件
 
-![演示效果](./Readme/LiquidSim.mp4)
+<video width="320" height="240" controls> 
+  <source src="./Readme/LiquidSim.mp4" type="video/mp4"> 
+</video>
 
 基于 Godot 4.6 的实时 2D 流体模拟插件，使用 GPU Compute Shader 实现高性能流体效果。
 
@@ -36,4 +38,5 @@
 ## 参考
 
 [godot-fluid-simulation](https://github.com/Jules5/godot-fluid-simulation)
+
 [让流体模拟融入你的2D游戏中~光影~碰撞~无限距离~](https://www.bilibili.com/video/BV1RPb8zAEzY)
