@@ -14,6 +14,64 @@
 [sub_resource type="LabelSettings" id="LabelSettings_gmd6v"]
 font_size = 32
 
+[sub_resource type="Animation" id="Animation_gmd6v"]
+resource_name = "Move"
+length = 10.0
+loop_mode = 1
+tracks/0/type = "bezier"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("FluidEmitters/SmokeSource4:position:x")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"handle_modes": PackedInt32Array(0, 0, 0, 0, 0, 0),
+"points": PackedFloat32Array(259, -0.25, 0, 0.25, 0, 372, -0.5766667, -18.833334, 0, 0, 10, -0.45333332, 60.333336, 0, 0, -332, -0.38000005, 57.000004, 0, 0, 0, -0.25666666, -55.333336, 0, 0, 259, -0.25, 0, 0.25, 0),
+"times": PackedFloat32Array(0, 2.1800003, 4.9, 7.1800003, 8.72, 10)
+}
+tracks/1/type = "bezier"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("FluidEmitters/SmokeSource4:position:y")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"handle_modes": PackedInt32Array(0, 0, 0, 0, 0, 0),
+"points": PackedFloat32Array(205, -0.25, 0, 0.25, 0, -60, -0.5766667, 44.166668, 0, 0, -150, -0.45333332, 15.000001, 0, 0, 15, -0.38000005, -27.500002, 0, 0, 188, -0.25666666, -28.833332, 0, 0, 205, -0.25, 0, 0.25, 0),
+"times": PackedFloat32Array(0, 2.1800003, 4.9, 7.1800003, 8.72, 10)
+}
+
+[sub_resource type="Animation" id="Animation_10thg"]
+length = 0.001
+tracks/0/type = "bezier"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("FluidEmitters/SmokeSource4:position:x")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"handle_modes": PackedInt32Array(0),
+"points": PackedFloat32Array(259, -0.25, 0, 0.25, 0),
+"times": PackedFloat32Array(0)
+}
+tracks/1/type = "bezier"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("FluidEmitters/SmokeSource4:position:y")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"handle_modes": PackedInt32Array(0),
+"points": PackedFloat32Array(205, -0.25, 0, 0.25, 0),
+"times": PackedFloat32Array(0)
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_10thg"]
+_data = {
+&"Move": SubResource("Animation_gmd6v"),
+&"RESET": SubResource("Animation_10thg")
+}
+
 [node name="WorldFluidTest" type="Node2D" unique_id=1319974097 node_paths=PackedStringArray("Camera", "FluidDisplay", "FluidDomain", "FluidSim")]
 script = ExtResource("1_world")
 Camera = NodePath("Player/Camera2D")
@@ -26,10 +84,10 @@ z_index = 10
 
 [node name="Pillar1" type="ColorRect" parent="Obstacles" unique_id=109083946 groups=["obstacles"]]
 z_index = 10
-offset_left = -80.0
-offset_top = -60.0
-offset_right = -40.0
-offset_bottom = 60.0
+offset_left = -105.0
+offset_top = 50.0
+offset_right = -65.0
+offset_bottom = 170.0
 color = Color(0.5, 0.45, 0.4, 1)
 
 [node name="Pillar2" type="ColorRect" parent="Obstacles" unique_id=1226215650 groups=["obstacles"]]
@@ -66,10 +124,10 @@ color = Color(0.45, 0.4, 0.35, 1)
 
 [node name="FarBlock2" type="ColorRect" parent="Obstacles" unique_id=11068203 groups=["obstacles"]]
 z_index = 10
-offset_left = -300.0
-offset_top = -150.0
-offset_right = -220.0
-offset_bottom = -100.0
+offset_left = 218.0
+offset_top = -130.0
+offset_right = 298.0
+offset_bottom = -80.0
 color = Color(0.45, 0.4, 0.35, 1)
 
 [node name="StaticBody2D" type="StaticBody2D" parent="Obstacles" unique_id=1965433970 groups=["obstacles"]]
@@ -108,10 +166,10 @@ EmissionModeType = 2
 BurstInterval = 0.3
 
 [node name="SmokeSource4" type="Node2D" parent="FluidEmitters" unique_id=535832613]
-position = Vector2(179, 141)
+position = Vector2(259, 205)
 script = ExtResource("3_emitter")
 Preset = 3
-EmitColor = Color(0.77055055, 0.652338, 1.1551381e-06, 1)
+EmitColor = Color(0.9344209, 4.428029e-06, 0.5617549, 1)
 EmitVelocity = Vector2(0.5, -2)
 EmitInterval = 0.0
 
@@ -177,3 +235,7 @@ offset_bottom = 23.0
 text = "123"
 label_settings = SubResource("LabelSettings_gmd6v")
 script = ExtResource("6_gmd6v")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=170712758]
+libraries/ = SubResource("AnimationLibrary_10thg")
+autoplay = &"Move"

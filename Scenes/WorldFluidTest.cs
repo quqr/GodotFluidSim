@@ -119,7 +119,9 @@ public partial class WorldFluidTest : Node2D
             var worldPos = GetGlobalMousePosition();
             var fluidPos = FluidSim.WorldToFluidPos(worldPos);
             var vel = new Vector2(MouseVelocity.X, MouseVelocity.Y) * dt * MouseVelocityScale;
-            FluidSim.QueueDraw(fluidPos, new Color(0.7f, 0.7f, 0.75f, 0.6f), vel, 0.8f, 1.0f);
+            var color = new Color(GD.Randf(), GD.Randf(), GD.Randf());
+            FluidSim.QueueDraw(fluidPos, 
+                color, vel, 0.8f, 1.0f);
         }
 
         MouseVelocity = Vector2I.Zero;
