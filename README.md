@@ -1,8 +1,11 @@
 # LiquidSim - 2D 流体模拟插件
 
-<video width="320" height="240" controls> 
-  <source src="./Readme/LiquidSim.mp4" type="video/mp4"> 
-</video>
+
+
+
+https://github.com/user-attachments/assets/17d66b3b-8cd7-4ff3-90cc-26a2bfd599dd
+
+
 
 基于 Godot 4.6 的实时 2D 流体模拟插件，使用 GPU Compute Shader 实现高性能流体效果。
 
@@ -11,7 +14,6 @@
 - **GPU 加速计算** - 基于 Navier-Stokes 方程，所有计算在 GPU 上并行执行
 - **多种发射器** - 支持流体发射器（FluidEmitter）和力发射器（FluidForceEmitter）
 - **障碍物交互** - 流体与刚体、角色控制器等物理对象实时交互
-- **丰富预设** - 内置爆炸、烟雾、火焰、喷泉等 7 种预设效果
 - **高度可配置** - 分辨率、衰减、涡度增强等参数均可调节
 - **跟随系统** - 流体域可跟随摄像机或任意节点移动
 
