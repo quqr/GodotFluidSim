@@ -1,4 +1,4 @@
-# LiquidSim - 2D 流体模拟插件
+# fluid-simulation - 2D 流体模拟插件
 
 
 
