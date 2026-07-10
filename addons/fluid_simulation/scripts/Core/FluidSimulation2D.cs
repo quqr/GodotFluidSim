@@ -340,6 +340,23 @@ public partial class FluidSimulation2D : Node
     }
 
     /// <summary>
+    ///     将世界坐标转换为流体模拟的 UV 坐标 [0,1]。
+    ///     以跟随节点（或世界原点）为中心，将世界坐标映射到 [0,1] 范围。
+    /// </summary>
+    /// <param name="worldPos">世界空间坐标。</param>
+    /// <returns>对应的流体模拟 UV 坐标 [0,1]。</returns>
+    private Vector2 WorldToUV(Vector2 worldPos)
+    {
+        var domainCenter = Vector2.Zero;
+        if (FollowNode != null && IsInstanceValid(FollowNode)) domainCenter = FollowNode.GlobalPosition;
+        var localPos = worldPos - domainCenter;
+        return new Vector2(
+            localPos.X / FluidWorldSize.X + 0.5f,
+            localPos.Y / FluidWorldSize.Y + 0.5f
+        );
+    }
+
+    /// <summary>
     ///     将世界坐标转换为流体模拟的像素坐标（基于 SimulationResolution）。
     ///     以跟随节点（或世界原点）为中心，将世界坐标映射到 [0, SimulationResolution] 范围内。
     /// </summary>
@@ -347,14 +364,7 @@ public partial class FluidSimulation2D : Node
     /// <returns>对应的流体模拟像素坐标。</returns>
     public Vector2 WorldToFluidPos(Vector2 worldPos)
     {
-        var domainCenter = Vector2.Zero;
-        if (FollowNode != null && IsInstanceValid(FollowNode)) domainCenter = FollowNode.GlobalPosition;
-        var localPos = worldPos - domainCenter;
-        var uv = new Vector2(
-            localPos.X / FluidWorldSize.X + 0.5f,
-            localPos.Y / FluidWorldSize.Y + 0.5f
-        );
-        return uv * SimulationResolution;
+        return WorldToUV(worldPos) * SimulationResolution;
     }
 
     /// <summary>
@@ -364,14 +374,7 @@ public partial class FluidSimulation2D : Node
     /// <returns>对应的染料场像素坐标。</returns>
     public Vector2 WorldToDyePos(Vector2 worldPos)
     {
-        var domainCenter = Vector2.Zero;
-        if (FollowNode != null && IsInstanceValid(FollowNode)) domainCenter = FollowNode.GlobalPosition;
-        var localPos = worldPos - domainCenter;
-        var uv = new Vector2(
-            localPos.X / FluidWorldSize.X + 0.5f,
-            localPos.Y / FluidWorldSize.Y + 0.5f
-        );
-        return uv * DyeResolution;
+        return WorldToUV(worldPos) * DyeResolution;
     }
 
     /// <summary>
@@ -383,13 +386,7 @@ public partial class FluidSimulation2D : Node
     /// <returns>对应的流体模拟 UV 坐标 [0,1]。</returns>
     public Vector2 WorldToFluidUV(Vector2 worldPos)
     {
-        var domainCenter = Vector2.Zero;
-        if (FollowNode != null && IsInstanceValid(FollowNode)) domainCenter = FollowNode.GlobalPosition;
-        var localPos = worldPos - domainCenter;
-        return new Vector2(
-            localPos.X / FluidWorldSize.X + 0.5f,
-            localPos.Y / FluidWorldSize.Y + 0.5f
-        );
+        return WorldToUV(worldPos);
     }
 
     /// <summary>

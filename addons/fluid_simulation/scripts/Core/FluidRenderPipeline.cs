@@ -33,7 +33,8 @@ public class FluidRenderPipeline
     /// <summary>
     ///     初始化渲染管线，绑定 GPU 资源管理器和计算调度组大小。
     /// </summary>
-    internal void Initialize(GPUResourceManager gpu, int simXGroups, int simYGroups, int dyeXGroups, int dyeYGroups)
+    internal void Initialize(GPUResourceManager gpu, int simXGroups, int simYGroups,
+        int dyeXGroups, int dyeYGroups)
     {
         _gpu = gpu;
         _simXGroups = simXGroups;

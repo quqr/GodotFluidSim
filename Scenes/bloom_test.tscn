@@ -1,0 +1,129 @@
+[gd_scene format=3 uid="uid://bj80flqxsh4le"]
+
+[ext_resource type="Script" uid="uid://dju8wbwsn0f2h" path="res://Scenes/BloomTest.cs" id="1_bloom"]
+[ext_resource type="Script" uid="uid://br25mpl4eonso" path="res://addons/fluid_simulation/scripts/Core/FluidSimulation2D.cs" id="2_fluid"]
+[ext_resource type="Script" uid="uid://b0ubi06d8vbk0" path="res://addons/fluid_simulation/scripts/PostProcess/BloomPostProcess.cs" id="3_bloom_pp"]
+[ext_resource type="Script" uid="uid://ds74a7lrjhf31" path="res://addons/fluid_simulation/scripts/Emitters/FluidEmitter.cs" id="4_emitter"]
+
+[node name="BloomTest" type="Node2D" unique_id=1336659313 node_paths=PackedStringArray("FluidSim", "Bloom", "FluidDisplay", "Camera", "IntensitySlider", "ThresholdSlider", "IterationsSlider", "DownSampleSlider", "EnableBloomCheckBox")]
+script = ExtResource("1_bloom")
+FluidSim = NodePath("FluidDomain/FluidSimulation2D")
+Bloom = NodePath("BloomPostProcess")
+FluidDisplay = NodePath("FluidDomain/FluidDisplay")
+Camera = NodePath("Camera2D")
+IntensitySlider = NodePath("CanvasLayer/Panel/VBox/IntensitySlider")
+ThresholdSlider = NodePath("CanvasLayer/Panel/VBox/ThresholdSlider")
+IterationsSlider = NodePath("CanvasLayer/Panel/VBox/IterationsSlider")
+DownSampleSlider = NodePath("CanvasLayer/Panel/VBox/DownSampleSlider")
+EnableBloomCheckBox = NodePath("CanvasLayer/Panel/VBox/EnableBloomCheckBox")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1893161823]
+position_smoothing_enabled = true
+position_smoothing_speed = 8.0
+
+[node name="FluidDomain" type="Node2D" parent="." unique_id=367463133]
+z_index = -1
+
+[node name="FluidSimulation2D" type="Node" parent="FluidDomain" unique_id=163671809]
+script = ExtResource("2_fluid")
+ClearColor = Color(0, 0.65882355, 0.07058824, 1)
+
+[node name="FluidDisplay" type="TextureRect" parent="FluidDomain" unique_id=2046241199]
+z_index = -1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -960.0
+offset_top = -540.0
+offset_right = 960.0
+offset_bottom = 540.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="BloomPostProcess" type="Node" parent="." unique_id=724952297]
+script = ExtResource("3_bloom_pp")
+
+[node name="FluidEmitter" type="Node2D" parent="." unique_id=348754238]
+position = Vector2(0, 200)
+script = ExtResource("4_emitter")
+EmitColor = Color(0.8784314, 0.21568628, 0.27450982, 1)
+EmitVelocity = Vector2(0, -100)
+EmissionModeType = 2
+BurstCount = 20
+BurstInterval = 0.3
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=614258166]
+
+[node name="Panel" type="Panel" parent="CanvasLayer" unique_id=690115671]
+offset_right = 441.0
+offset_bottom = 530.0
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/Panel" unique_id=563491344]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="EnableBloomLabel" type="Label" parent="CanvasLayer/Panel/VBox" unique_id=1053097825]
+layout_mode = 2
+size_flags_vertical = 3
+text = "启用 Bloom"
+
+[node name="EnableBloomCheckBox" type="CheckBox" parent="CanvasLayer/Panel/VBox" unique_id=1544348236]
+layout_mode = 2
+size_flags_vertical = 3
+button_pressed = true
+
+[node name="IntensityLabel" type="Label" parent="CanvasLayer/Panel/VBox" unique_id=2019076236]
+layout_mode = 2
+size_flags_vertical = 3
+text = "Bloom 强度"
+
+[node name="IntensitySlider" type="HSlider" parent="CanvasLayer/Panel/VBox" unique_id=1955107831]
+layout_mode = 2
+size_flags_vertical = 3
+max_value = 4.0
+step = 0.01
+value = 1.0
+
+[node name="ThresholdLabel" type="Label" parent="CanvasLayer/Panel/VBox" unique_id=1565734394]
+layout_mode = 2
+size_flags_vertical = 3
+text = "亮度阈值"
+
+[node name="ThresholdSlider" type="HSlider" parent="CanvasLayer/Panel/VBox" unique_id=304193289]
+layout_mode = 2
+size_flags_vertical = 3
+max_value = 4.0
+step = 0.01
+value = 0.6
+
+[node name="IterationsLabel" type="Label" parent="CanvasLayer/Panel/VBox" unique_id=1931382818]
+layout_mode = 2
+size_flags_vertical = 3
+text = "模糊迭代次数"
+
+[node name="IterationsSlider" type="HSlider" parent="CanvasLayer/Panel/VBox" unique_id=762363646]
+layout_mode = 2
+size_flags_vertical = 3
+min_value = 1.0
+max_value = 8.0
+value = 3.0
+
+[node name="DownSampleLabel" type="Label" parent="CanvasLayer/Panel/VBox" unique_id=1000225019]
+layout_mode = 2
+size_flags_vertical = 3
+text = "降采样系数"
+
+[node name="DownSampleSlider" type="HSlider" parent="CanvasLayer/Panel/VBox" unique_id=851700499]
+layout_mode = 2
+size_flags_vertical = 3
+min_value = 1.0
+max_value = 8.0
+value = 2.0

@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://ce7v6k5w3l2ws"
+path="res://.godot/imported/bloom_combine.glsl-a46d1a034b339df5819d017d6e076a24.res"
+
+[deps]
+
+source_file="res://addons/fluid_simulation/shaders/postprocess/bloom_combine.glsl"
+dest_files=["res://.godot/imported/bloom_combine.glsl-a46d1a034b339df5819d017d6e076a24.res"]
+
+[params]
+
