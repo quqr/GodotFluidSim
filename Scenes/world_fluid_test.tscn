@@ -139,12 +139,12 @@ shape = SubResource("RectangleShape2D_qq447")
 [node name="FluidEmitters" type="Node2D" parent="." unique_id=975480629]
 
 [node name="SmokeSource1" type="Node2D" parent="FluidEmitters" unique_id=1614176799]
-position = Vector2(0, 141)
+position = Vector2(103, 117)
 script = ExtResource("3_emitter")
-Preset = 3
-EmitColor = Color(1, 0, 0, 1)
+EmitColor = Color(0.88235295, 0, 0.3882353, 1)
 EmitVelocity = Vector2(0.5, -2)
 EmitInterval = 0.0
+Active = false
 
 [node name="SmokeSource2" type="Node2D" parent="FluidEmitters" unique_id=1006643347]
 position = Vector2(-105, 0)
@@ -154,13 +154,15 @@ EmitVelocity = Vector2(-1, -1)
 ColorRadius = 1.2
 VelocityRadius = 1.2
 EmitInterval = 0.0
+Active = false
 EmissionShapeType = 1
 
 [node name="SmokeSource3" type="Node2D" parent="FluidEmitters" unique_id=1296975141]
-position = Vector2(200, 45)
+position = Vector2(322, 205)
 script = ExtResource("3_emitter")
-EmitColor = Color(0.28006402, 0.6713972, 0.809225, 1)
+EmitColor = Color(0.2993392, 0.7150144, 0.4236678, 1)
 EmitVelocity = Vector2(-100, -100)
+ColorRadius = 1.0
 EmitInterval = 0.02
 EmissionModeType = 2
 BurstInterval = 0.3
@@ -168,10 +170,8 @@ BurstInterval = 0.3
 [node name="SmokeSource4" type="Node2D" parent="FluidEmitters" unique_id=535832613]
 position = Vector2(259, 205)
 script = ExtResource("3_emitter")
-Preset = 3
-EmitColor = Color(0.9344209, 4.428029e-06, 0.5617549, 1)
-EmitVelocity = Vector2(0.5, -2)
-EmitInterval = 0.0
+EmitColor = Color(0.7615043, 0.42753834, 0.18387055, 1)
+EmitVelocity = Vector2(10, -20)
 
 [node name="FluidForceEmitter" type="Node2D" parent="FluidEmitters" unique_id=842802988]
 position = Vector2(-395, 0)
@@ -204,12 +204,8 @@ z_index = -1
 
 [node name="FluidSimulation2D" type="Node" parent="FluidDomain" unique_id=1066662224]
 script = ExtResource("2_fluid")
-BrushSize = 500.0
-ColorDecay = 0.001
-DiffusionStrength = 2.0
-JacobiPressureIterations = 20
-VelocityDecay = -0.1
-VorticityAmount = 0.0
+SimulationResolution = Vector2(456, 256)
+Curl = 1.0
 
 [node name="FluidDisplay" type="TextureRect" parent="FluidDomain" unique_id=1109890304]
 z_index = -1

@@ -22,21 +22,22 @@ internal struct ForceEmitterParams
 /// <summary>
 ///     2D 流体模拟节点，基于 Navier-Stokes 方程，使用 GPU Compute Shader 实现实时流体效果。
 ///     <para>
-///         模拟流程（每帧在渲染线程执行）：
+///         WFS 管线流程（每帧在渲染线程执行）：
 ///         1. 处理批量绘制队列（Splat）
-///         2. 更新障碍物纹理
-///         3. 根据跟随节点的移动偏移流体域（Shift Texture）
-///         4. 应用外部输入力和颜色
-///         5. 计算障碍物对流体的排斥力
-///         6. 速度场平流（Advection）
-///         7. Jacobi 迭代求解速度场扩散
-///         8. 涡度增强（Vorticity Confinement）
-///         9. 计算速度场散度（Divergence）
-///         10. Jacobi 迭代求解压力场（Pressure Solve）
-///         11. 从速度场中减去压力梯度（Pressure Subtraction）
-///         12. 边界条件处理（Boundary）
-///         13. 颜色/密度场平流
+///         2. 更新障碍物纹理 + 域偏移（Shift Texture）
+///         3. 应用 GPU 力发射器 + 外部输入力/颜色 + Splat 请求
+///         4. 计算障碍物对流体的排斥力
+///         5. 计算 Curl（涡度场）
+///         6. 涡度增强（Vorticity Confinement）
+///         7. 计算速度场散度（Divergence）
+///         8. 压力衰减（ClearPressure，PRESSURE×0.8）
+///         9. Jacobi 迭代求解压力场（Pressure Solve）
+///         10. 从速度场中减去压力梯度（Gradient Subtract）
+///         11. 边界条件处理（Boundary）
+///         12. 速度场平流（Advect Velocity）
+///         13. 颜色/染料场平流（Advect Dye）
 ///         14. 复制当前障碍物纹理到上一帧缓冲
+///         15. Display 后处理（Shading）
 ///     </para>
 /// </summary>
 [GlobalClass]
@@ -72,8 +73,8 @@ public partial class FluidSimulation2D : Node
     /// <summary>批量绘制的速度列表，与 BatchPoints 一一对应。</summary>
     public List<Vector2> BatchVelocities = [];
 
-    /// <summary>画笔基础半径（像素单位），影响 Splat 操作的作用范围。</summary>
-    [Export] public float BrushSize = 5.0f;
+    /// <summary>Splat 半径配置值（UV 空间），匹配 WFS 的 SPLAT_RADIUS。实际传入 shader 时除以 100。</summary>
+    [Export] public float SplatRadius = 0.25f;
 
     /// <summary>缓存的障碍物原始字节数据（Rgba32f 格式），直接上传到 GPU。</summary>
     internal byte[] CachedObstacleData;
@@ -81,14 +82,8 @@ public partial class FluidSimulation2D : Node
     /// <summary>流体颜色纹理的清除颜色，也是流体的初始背景颜色。</summary>
     [Export] public Color ClearColor = new(0, 0, 0, 0);
 
-    /// <summary>颜色/密度场每帧的衰减量，控制颜色逐渐消散的速度。</summary>
-    [Export] public float ColorDecay = 0.0005f;
-
-    /// <summary>颜色/密度的强度缩放系数，影响 Splat 和颜色应用时的密度大小。</summary>
-    [Export] public float DensityScale = 1.0f;
-
-    /// <summary>扩散强度，控制流体的速度和颜色向周围扩散的程度。0 表示无扩散。</summary>
-    [Export] public float DiffusionStrength;
+    /// <summary>颜色/密度场每帧的衰减量（WFS DENSITY_DISSIPATION）。值越大衰减越快。</summary>
+    [Export] public float DensityDissipation = 1.0f;
 
     /// <summary>当前帧待处理的绘制请求数量，每帧渲染后重置为 0。</summary>
     public int DrawRequestCount;
@@ -123,9 +118,6 @@ public partial class FluidSimulation2D : Node
     /// <summary>跟随节点的路径，若设置则流体域会跟随该节点移动并产生相对位移偏移。</summary>
     [Export] public NodePath FollowNodePath;
 
-    /// <summary>网格缩放系数，影响平流和压力求解中网格间距 (Δx) 的计算。</summary>
-    [Export] public float GridScale = 1.0f;
-
     /// <summary>输入颜色场纹理脏标记，为 true 时下一帧会上传 InputColorsImg 到 GPU。</summary>
     internal bool InputColorsDirty = true;
 
@@ -138,14 +130,8 @@ public partial class FluidSimulation2D : Node
     /// <summary>每帧外部输入的力场图像（RGBAf 格式），用于 ApplyForces 计算着色器读取并施加到速度场上。</summary>
     public Image InputForcesImg;
 
-    /// <summary>Jacobi 迭代求解压力场的迭代次数。次数越多，不可压缩性约束越好，但开销越大。</summary>
-    [Export] public int JacobiPressureIterations = 60;
-
-    /// <summary>Jacobi 迭代求解速度场扩散的迭代次数。次数越多，扩散越精确，但开销越大。</summary>
-    [Export] public int JacobiVelocityIterations = 10;
-
-    /// <summary>鼠标移动速度到流体速度的缩放系数，控制鼠标拖拽对流体速度的影响大小。</summary>
-    [Export] public float MouseVelocityScale = 0.1f;
+    /// <summary>Jacobi 迭代求解压力场的迭代次数（WFS PRESSURE_ITERATIONS）。次数越多，不可压缩性约束越好，但开销越大。</summary>
+    [Export] public int PressureIterations = 20;
 
     /// <summary>障碍物脏标记，为 true 时会在下一帧渲染时将 CachedObstacleData 上传到 GPU。</summary>
     public bool ObstacleDirty;
@@ -158,25 +144,45 @@ public partial class FluidSimulation2D : Node
 
     // ======================== 可导出的配置属性 ========================
 
-    /// <summary>模拟网格分辨率（宽 × 高），决定流体纹理的精度。分辨率越高，细节越丰富，GPU 开销越大。</summary>
-    [Export] public Vector2 Resolution = new(640, 360);
+    /// <summary>模拟网格分辨率（宽 × 高），决定物理计算纹理的精度。速度/压力/散度场在此分辨率计算。</summary>
+    [Export] public Vector2 SimulationResolution = new(228, 128);
 
-    /// <summary>是否使用减色混合模式（CMY）。为 true 时初始颜色为白色，颜色混合使用减色原理。</summary>
-    [Export] public bool SubtractiveMixing;
+    /// <summary>染料/颜色场分辨率（宽 × 高），决定颜色纹理的精度。通常高于 SimulationResolution 以获得更好的视觉效果。</summary>
+    [Export] public Vector2 DyeResolution = new(1820, 1024);
 
-    /// <summary>速度场衰减系数。负值表示无衰减；正值会使速度逐渐减小。</summary>
-    [Export] public float VelocityDecay = -1.0f;
+    /// <summary>向后兼容：Resolution 返回 SimulationResolution。</summary>
+    public Vector2 Resolution => SimulationResolution;
 
-    /// <summary>涡度增强的强度系数，值越大流体旋转越明显。</summary>
-    [Export] public float VorticityAmount = 0.4f;
+    /// <summary>速度场衰减系数（WFS VELOCITY_DISSIPATION）。正值会使速度逐渐减小。</summary>
+    [Export] public float VelocityDissipation = 0.2f;
+
+    /// <summary>涡度增强的强度系数（WFS CURL）。值越大流体旋转越明显。</summary>
+    [Export] public float Curl = 30.0f;
+
+    /// <summary>压力衰减系数（WFS PRESSURE）。每帧压力场乘以此值，实现压力残留衰减。</summary>
+    [Export] public float Pressure = 0.8f;
+
+    /// <summary>Splat 力度系数（WFS SPLAT_FORCE）。控制鼠标/输入产生的速度强度。</summary>
+    [Export] public float SplatForce = 6000f;
+
+    // ======================== 后处理参数 ========================
+
+    /// <summary>是否启用 Display 着色效果（WFS shading），使流体看起来更有立体感。</summary>
+    [Export] public bool EnableShading = true;
 
     // ======================== 计算调度参数 ========================
 
-    /// <summary>计算着色器在 X 维度的工作组数量，ceil(Resolution.X / 8)。</summary>
-    private int _xGroups;
+    /// <summary>计算着色器在 X 维度的工作组数量，ceil(SimulationResolution.X / 8)。</summary>
+    private int _simXGroups;
 
-    /// <summary>计算着色器在 Y 维度的工作组数量，ceil(Resolution.Y / 8)。</summary>
-    private int _yGroups;
+    /// <summary>计算着色器在 Y 维度的工作组数量，ceil(SimulationResolution.Y / 8)。</summary>
+    private int _simYGroups;
+
+    /// <summary>颜色场计算着色器在 X 维度的工作组数量，ceil(DyeResolution.X / 8)。</summary>
+    private int _dyeXGroups;
+
+    /// <summary>颜色场计算着色器在 Y 维度的工作组数量，ceil(DyeResolution.Y / 8)。</summary>
+    private int _dyeYGroups;
 
     // ======================== 输出纹理 ========================
 
@@ -221,15 +227,17 @@ public partial class FluidSimulation2D : Node
     /// </summary>
     public override void _Ready()
     {
-        _xGroups = (int)((Resolution.X - 1) / 8 + 1);
-        _yGroups = (int)((Resolution.Y - 1) / 8 + 1);
+        _simXGroups = (int)((SimulationResolution.X - 1) / 8 + 1);
+        _simYGroups = (int)((SimulationResolution.Y - 1) / 8 + 1);
+        _dyeXGroups = (int)((DyeResolution.X - 1) / 8 + 1);
+        _dyeYGroups = (int)((DyeResolution.Y - 1) / 8 + 1);
 
         _gpu = new GPUResourceManager();
         _renderPipeline = new FluidRenderPipeline();
         RenderingServer.CallOnRenderThread(Callable.From(InitializeGPU));
 
-        InputForcesImg = Image.CreateEmpty((int)Resolution.X, (int)Resolution.Y, false, Image.Format.Rgbaf);
-        InputColorsImg = Image.CreateEmpty((int)Resolution.X, (int)Resolution.Y, false, Image.Format.Rgbaf);
+        InputForcesImg = Image.CreateEmpty((int)SimulationResolution.X, (int)SimulationResolution.Y, false, Image.Format.Rgbah);
+        InputColorsImg = Image.CreateEmpty((int)DyeResolution.X, (int)DyeResolution.Y, false, Image.Format.Rgbah);
 
         if (FollowNodePath != null)
         {
@@ -298,8 +306,8 @@ public partial class FluidSimulation2D : Node
     private void InitializeGPU()
     {
         _gpu.ClearUniformSetCache();
-        _gpu.Initialize(Resolution, SubtractiveMixing, ClearColor, MaxBatchPoints);
-        _renderPipeline.Initialize(_gpu, _xGroups, _yGroups);
+        _gpu.Initialize(SimulationResolution, DyeResolution, ClearColor, MaxBatchPoints);
+        _renderPipeline.Initialize(_gpu, _simXGroups, _simYGroups, _dyeXGroups, _dyeYGroups);
     }
 
     // ======================== 公共 API ========================
@@ -332,8 +340,8 @@ public partial class FluidSimulation2D : Node
     }
 
     /// <summary>
-    ///     将世界坐标转换为流体模拟的像素坐标。
-    ///     以跟随节点（或世界原点）为中心，将世界坐标映射到 [0, Resolution] 范围内。
+    ///     将世界坐标转换为流体模拟的像素坐标（基于 SimulationResolution）。
+    ///     以跟随节点（或世界原点）为中心，将世界坐标映射到 [0, SimulationResolution] 范围内。
     /// </summary>
     /// <param name="worldPos">世界空间坐标。</param>
     /// <returns>对应的流体模拟像素坐标。</returns>
@@ -346,18 +354,53 @@ public partial class FluidSimulation2D : Node
             localPos.X / FluidWorldSize.X + 0.5f,
             localPos.Y / FluidWorldSize.Y + 0.5f
         );
-        return uv * Resolution;
+        return uv * SimulationResolution;
+    }
+
+    /// <summary>
+    ///     将世界坐标转换为染料场的像素坐标（基于 DyeResolution）。
+    /// </summary>
+    /// <param name="worldPos">世界空间坐标。</param>
+    /// <returns>对应的染料场像素坐标。</returns>
+    public Vector2 WorldToDyePos(Vector2 worldPos)
+    {
+        var domainCenter = Vector2.Zero;
+        if (FollowNode != null && IsInstanceValid(FollowNode)) domainCenter = FollowNode.GlobalPosition;
+        var localPos = worldPos - domainCenter;
+        var uv = new Vector2(
+            localPos.X / FluidWorldSize.X + 0.5f,
+            localPos.Y / FluidWorldSize.Y + 0.5f
+        );
+        return uv * DyeResolution;
+    }
+
+    /// <summary>
+    ///     将世界坐标转换为流体模拟的 UV 坐标 [0,1]。
+    ///     以跟随节点（或世界原点）为中心，将世界坐标映射到 [0,1] 范围。
+    ///     用于 Splat 操作（匹配 WFS 的 UV 空间 splat 机制）。
+    /// </summary>
+    /// <param name="worldPos">世界空间坐标。</param>
+    /// <returns>对应的流体模拟 UV 坐标 [0,1]。</returns>
+    public Vector2 WorldToFluidUV(Vector2 worldPos)
+    {
+        var domainCenter = Vector2.Zero;
+        if (FollowNode != null && IsInstanceValid(FollowNode)) domainCenter = FollowNode.GlobalPosition;
+        var localPos = worldPos - domainCenter;
+        return new Vector2(
+            localPos.X / FluidWorldSize.X + 0.5f,
+            localPos.Y / FluidWorldSize.Y + 0.5f
+        );
     }
 
     /// <summary>
     ///     将一次绘制请求加入队列，在下一帧渲染时统一对流体注入速度和颜色。
     /// </summary>
-    /// <param name="worldPos">注入位置的世界坐标。</param>
-    /// <param name="color">注入的颜色值。</param>
-    /// <param name="velocity">注入的速度向量。</param>
-    /// <param name="colorRadius">颜色注入的半径倍率（乘以 BrushSize）。</param>
-    /// <param name="velocityRadius">速度注入的半径倍率（乘以 BrushSize）。</param>
-    public void QueueDraw(Vector2 worldPos, Color color, Vector2 velocity, float colorRadius, float velocityRadius)
+    /// <param name="uvPosition">注入位置的 UV 坐标 [0,1]。</param>
+    /// <param name="color">注入的颜色值（已包含亮度缩放）。</param>
+    /// <param name="velocity">注入的速度向量（UV 空间）。</param>
+    /// <param name="colorRadius">颜色注入的半径倍率（乘以 SplatRadius/100）。</param>
+    /// <param name="velocityRadius">速度注入的半径倍率（乘以 SplatRadius/100）。</param>
+    public void QueueDraw(Vector2 uvPosition, Color color, Vector2 velocity, float colorRadius, float velocityRadius)
     {
         if (DrawRequestCount >= DrawRequests.Length)
         {
@@ -367,7 +410,7 @@ public partial class FluidSimulation2D : Node
 
         DrawRequests[DrawRequestCount] = new DrawRequest
         {
-            Position = worldPos, Color = color, Velocity = velocity,
+            Position = uvPosition, Color = color, Velocity = velocity,
             ColorRadius = colorRadius, VelocityRadius = velocityRadius
         };
         DrawRequestCount++;

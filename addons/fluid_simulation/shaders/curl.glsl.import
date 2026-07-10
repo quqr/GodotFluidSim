@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://cltsufyh1orm8"
+path="res://.godot/imported/curl.glsl-f0bca2158ad0f4022126064894a57ffc.res"
+
+[deps]
+
+source_file="res://addons/fluid_simulation/shaders/curl.glsl"
+dest_files=["res://.godot/imported/curl.glsl-f0bca2158ad0f4022126064894a57ffc.res"]
+
+[params]
+

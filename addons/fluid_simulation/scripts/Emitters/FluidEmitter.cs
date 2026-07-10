@@ -6,7 +6,7 @@ namespace FluidSimulation;
 ///     流体发射器节点，负责按配置的形状、速度和颜色向流体模拟中注入粒子。
 ///     <para>
 ///         支持三种发射模式（持续、单次爆发、周期性爆发）、五种发射形状（点、圆、矩形、线段、纹理遮罩）、
-///         三种速度模式（定向、径向、随机），以及七种预设效果（爆炸、水雾、烟雾、喷泉、蒸汽、火焰）。
+///         三种速度模式（定向、径向、随机）。
 ///     </para>
 ///     <para>
 ///         使用方式：将此节点添加到场景中，配置发射参数，它会自动查找场景中的 FluidSimulation2D 节点并注入粒子。
@@ -19,23 +19,8 @@ public partial class FluidEmitter : Node2D, IFluidEmitter
     private Color[] _cachedColors;
     private float[] _cachedRadii;
 
-    private EmitterPreset _preset = EmitterPreset.Custom;
-
     /// <summary>检测到的碰撞范围形状，由 _Ready 时自动从子节点中查找。</summary>
     public CollisionShape2D RangeShape { get; set; }
-
-    /// <summary>发射器预设，选择后自动填充发射参数。设为 Custom 时保留当前参数不做修改。</summary>
-    [Export]
-    public EmitterPreset Preset
-    {
-        get => _preset;
-        set
-        {
-            _preset = value;
-            if (_preset != EmitterPreset.Custom)
-                ApplyPreset(_preset);
-        }
-    }
 
     /// <summary>范围采样模式，当使用 CollisionShape2D 定义发射范围时，控制粒子在范围形状内的分布方式（内部采样或边缘采样）。</summary>
     [Export]
@@ -146,106 +131,19 @@ public partial class FluidEmitter : Node2D, IFluidEmitter
 
     /// <summary>
     ///     内部发射方法，采样指定数量的粒子点并注入流体模拟。
+    ///     先用世界坐标生成速度（径向/旋涡方向需要世界坐标一致），
+    ///     再将点位转换为 UV [0,1] 坐标供 WFS splat shader 使用。
     /// </summary>
     /// <param name="fluidSim">目标流体模拟节点。</param>
     /// <param name="count">要发射的粒子数量。</param>
     private void EmitInternal(FluidSimulation2D fluidSim, int count)
     {
         var points = EmitterShapeSampler.Sample(count, this);
-        for (var i = 0; i < points.Length; i++) points[i] = fluidSim.WorldToFluidPos(points[i]);
         var velocities = EmitterVelocityGenerator.Generate(points, this);
         var colors = MakeColorArray(count);
         var radii = MakeRadiusArray(count);
+        for (var i = 0; i < points.Length; i++) points[i] = fluidSim.WorldToFluidUV(points[i]);
         fluidSim.QueueDrawBatch(points, colors, velocities, radii);
-    }
-
-    /// <summary>
-    ///     应用预设配置，将发射参数设置为指定预设的值。设置后仍可手动微调任何参数。
-    /// </summary>
-    /// <param name="preset">要应用的预设类型。</param>
-    public void ApplyPreset(EmitterPreset preset)
-    {
-        switch (preset)
-        {
-            case EmitterPreset.Explosion:
-                EmissionModeType = EmissionMode.SingleBurst;
-                EmissionShapeType = EmissionShape.Circle;
-                EmitColor = new Color(1.0f, 0.5f, 0.1f, 0.9f);
-                EmitVelocity = Vector2.Zero;
-                ColorRadius = 1.5f;
-                VelocityRadius = 2.0f;
-                BurstCount = 128;
-                EmitInterval = 0.0f;
-                VelocityPatternType = VelocityPattern.Radial;
-                SwirlStrength = 0.3f;
-                ShapeSize = new Vector2(3.0f, 3.0f);
-                break;
-            case EmitterPreset.WaterMist:
-                EmissionModeType = EmissionMode.Continuous;
-                EmissionShapeType = EmissionShape.Rect;
-                EmitColor = new Color(0.8f, 0.9f, 1.0f, 0.3f);
-                EmitVelocity = new Vector2(0, -0.5f);
-                ColorRadius = 0.8f;
-                VelocityRadius = 0.5f;
-                BurstCount = 10;
-                EmitInterval = 0.03f;
-                VelocityPatternType = VelocityPattern.Directional;
-                SwirlStrength = 0.0f;
-                ShapeSize = new Vector2(2.0f, 0.5f);
-                break;
-            case EmitterPreset.Smoke:
-                EmissionModeType = EmissionMode.Continuous;
-                EmissionShapeType = EmissionShape.Circle;
-                EmitColor = new Color(0.3f, 0.3f, 0.3f, 0.4f);
-                EmitVelocity = new Vector2(0, -1.0f);
-                ColorRadius = 1.0f;
-                VelocityRadius = 0.6f;
-                BurstCount = 10;
-                EmitInterval = 0.05f;
-                VelocityPatternType = VelocityPattern.Directional;
-                SwirlStrength = 0.1f;
-                ShapeSize = new Vector2(1.5f, 1.5f);
-                break;
-            case EmitterPreset.Fountain:
-                EmissionModeType = EmissionMode.Continuous;
-                EmissionShapeType = EmissionShape.Circle;
-                EmitColor = new Color(0.3f, 0.6f, 1.0f, 0.7f);
-                EmitVelocity = new Vector2(0, -8.0f);
-                ColorRadius = 0.6f;
-                VelocityRadius = 1.0f;
-                BurstCount = 10;
-                EmitInterval = 0.02f;
-                VelocityPatternType = VelocityPattern.Radial;
-                SwirlStrength = 0.0f;
-                ShapeSize = new Vector2(0.5f, 0.5f);
-                break;
-            case EmitterPreset.Steam:
-                EmissionModeType = EmissionMode.PeriodicBurst;
-                EmissionShapeType = EmissionShape.Circle;
-                EmitColor = new Color(0.9f, 0.9f, 0.9f, 0.5f);
-                EmitVelocity = new Vector2(0, -2.0f);
-                ColorRadius = 1.2f;
-                VelocityRadius = 0.8f;
-                BurstCount = 20;
-                BurstInterval = 0.5f;
-                VelocityPatternType = VelocityPattern.Random;
-                SwirlStrength = 0.2f;
-                ShapeSize = new Vector2(2.0f, 2.0f);
-                break;
-            case EmitterPreset.Fire:
-                EmissionModeType = EmissionMode.Continuous;
-                EmissionShapeType = EmissionShape.Rect;
-                EmitColor = new Color(1.0f, 0.4f, 0.1f, 0.8f);
-                EmitVelocity = new Vector2(0, -3.0f);
-                ColorRadius = 0.5f;
-                VelocityRadius = 0.8f;
-                BurstCount = 10;
-                EmitInterval = 0.02f;
-                VelocityPatternType = VelocityPattern.Directional;
-                SwirlStrength = 0.15f;
-                ShapeSize = new Vector2(1.0f, 0.5f);
-                break;
-        }
     }
 
     /// <summary>节点初始化，将自身加入 fluid_emitters 组，初始化颜色/半径缓存数组，并从子节点中检测 CollisionShape2D 作为发射范围形状。</summary>

@@ -15,8 +15,17 @@ public class GPUResourceManager
 {
     private readonly Dictionary<(ulong, ulong, uint, int), Rid> _uniformSetCache = new();
 
-    /// <summary>平流（Advection）计算管线，用于根据速度场搬运速度/颜色。</summary>
+    /// <summary>平流（Advection）计算管线，用于根据速度场搬运速度/颜色（WFS 单 shader）。</summary>
     internal ComputePipeline AdvectPipeline;
+
+    /// <summary>Curl 计算管线，计算速度场的涡度（WFS curlShader）。</summary>
+    internal ComputePipeline CurlPipeline;
+
+    /// <summary>压力衰减管线，每帧将压力场乘以 PRESSURE 系数（WFS clearShader）。</summary>
+    internal ComputePipeline ClearPipeline;
+
+    /// <summary>显示管线，WFS displayShaderSource（仅 shading）。</summary>
+    internal ComputePipeline DisplayPipeline;
 
     /// <summary>应用外部颜色管线，将输入颜色场图像叠加到颜色场上。</summary>
     internal ComputePipeline ApplyColorsPipeline;
@@ -42,7 +51,10 @@ public class GPUResourceManager
     /// <summary>边界条件处理管线，确保流体在障碍物和域边界处满足正确的边界条件。</summary>
     internal ComputePipeline BoundaryPipeline;
 
-    /// <summary>纹理复制管线，用于将障碍物纹理复制到上一帧缓冲中。</summary>
+    /// <summary>纹理复制管线，用于将障碍物纹理复制到上一帧缓冲中（rgba32f 版本，用于障碍物纹理）。</summary>
+    internal ComputePipeline CopyTextureRgba32fPipeline;
+
+    /// <summary>纹理复制管线，用于将纹理复制到另一纹理中（rgba16f 版本）。</summary>
     internal ComputePipeline CopyTexturePipeline;
 
     /// <summary>Godot 渲染设备实例，用于创建和管理 GPU 资源（纹理、着色器、管线等）。</summary>
@@ -63,13 +75,7 @@ public class GPUResourceManager
     /// <summary>纹理偏移管线，当流体域跟随节点移动时，对颜色和速度纹理进行整体平移。</summary>
     internal ComputePipeline ShiftTexturePipeline;
 
-    /// <summary>批量 Splat 管线，一次性向流体注入多个点的速度/颜色（性能优化）。</summary>
-    internal ComputePipeline SplatBatchPipeline;
-
-    /// <summary>颜色 Splat 管线，在指定位置向颜色场注入颜色（圆形高斯分布）。</summary>
-    internal ComputePipeline SplatColorPipeline;
-
-    /// <summary>速度 Splat 管线，在指定位置向速度场注入速度（圆形高斯分布）。</summary>
+    /// <summary>Splat 管线（合并 velocity + color），WFS splatShader。在指定位置向场注入高斯分布的值。</summary>
     internal ComputePipeline SplatPipeline;
 
     /// <summary>压力梯度减法管线，从速度场中减去压力梯度以满足不可压缩条件。</summary>
@@ -78,8 +84,14 @@ public class GPUResourceManager
     /// <summary>颜色场纹理 RID（RGBA 通道存储流体颜色和不透明度）。</summary>
     internal Rid TexIdColor;
 
+    /// <summary>颜色场临时纹理 RID，作为颜色场乒乓缓冲的中间交换纹理（DyeResolution 尺寸）。</summary>
+    internal Rid TexIdTempDye;
+
     /// <summary>散度场纹理 RID，存储速度场的散度值，用于压力泊松方程求解。</summary>
     internal Rid TexIdDivergence;
+
+    /// <summary>Curl 纹理 RID，存储速度场的涡度值（WFS curlShader 输出），用于 vorticity confinement。</summary>
+    internal Rid TexIdCurl;
 
     /// <summary>输入颜色场纹理 RID，由 InputColorsImg CPU 图像每帧上传更新。</summary>
     internal Rid TexIdInputColors;
@@ -105,19 +117,27 @@ public class GPUResourceManager
     /// <summary>涡度计算管线，计算速度场的涡度并施加涡度增强力以增加流体旋转细节。</summary>
     internal ComputePipeline VorticityPipeline;
 
+    // ======================== 后处理管线 ========================
+
+    /// <summary>显示输出纹理，与 DyeResolution 同分辨率。WFS displayShader 输出。</summary>
+    internal Rid TexIdDisplayOutput;
+
     /// <summary>
     ///     在渲染线程中初始化所有 GPU 资源。
-    ///     包括：创建所有计算管线、分配流体模拟纹理、配置纹理采样器和批量绘制缓冲区。
+    ///     包括：创建所有计算管线、分配流体模拟纹理（模拟分辨率和染料分辨率分离）、配置纹理采样器和批量绘制缓冲区。
     /// </summary>
-    /// <param name="resolution">模拟网格分辨率（宽 × 高），决定流体纹理的精度。</param>
-    /// <param name="subtractiveMixing">是否使用减色混合模式（CMY），为 true 时颜色初始为白色。</param>
+    /// <param name="simResolution">模拟网格分辨率（宽 × 高），决定物理计算纹理的精度。</param>
+    /// <param name="dyeResolution">染料/颜色场分辨率（宽 × 高），决定颜色纹理的精度。</param>
     /// <param name="clearColor">流体颜色纹理的清除颜色，也是流体的初始背景颜色。</param>
     /// <param name="maxBatchPoints">批量绘制队列的最大容量。</param>
-    internal void Initialize(Vector2 resolution, bool subtractiveMixing, Color clearColor, int maxBatchPoints)
+    internal void Initialize(Vector2 simResolution, Vector2 dyeResolution, Color clearColor, int maxBatchPoints)
     {
         Device = RenderingServer.GetRenderingDevice();
 
         AdvectPipeline = CreateComputePipeline("res://addons/fluid_simulation/shaders/advect.glsl");
+        CurlPipeline = CreateComputePipeline("res://addons/fluid_simulation/shaders/curl.glsl");
+        ClearPipeline = CreateComputePipeline("res://addons/fluid_simulation/shaders/clear.glsl");
+        DisplayPipeline = CreateComputePipeline("res://addons/fluid_simulation/shaders/display.glsl");
         JacobiPipeline = CreateComputePipeline("res://addons/fluid_simulation/shaders/jacobi.glsl");
         ApplyForcesPipeline = CreateComputePipeline("res://addons/fluid_simulation/shaders/apply_forces.glsl");
         ApplyColorsPipeline = CreateComputePipeline("res://addons/fluid_simulation/shaders/apply_colors.glsl");
@@ -128,38 +148,63 @@ public class GPUResourceManager
         VorticityPipeline = CreateComputePipeline("res://addons/fluid_simulation/shaders/vorticity.glsl");
         ObstacleForcePipeline = CreateComputePipeline("res://addons/fluid_simulation/shaders/obstacle_force.glsl");
         SplatPipeline = CreateComputePipeline("res://addons/fluid_simulation/shaders/splat.glsl");
-        SplatColorPipeline = CreateComputePipeline("res://addons/fluid_simulation/shaders/splat_color.glsl");
-        SplatBatchPipeline = CreateComputePipeline("res://addons/fluid_simulation/shaders/splat_batch.glsl");
         CopyTexturePipeline = CreateComputePipeline("res://addons/fluid_simulation/shaders/copy_texture.glsl");
+        CopyTextureRgba32fPipeline = CreateComputePipeline("res://addons/fluid_simulation/shaders/copy_texture_rgba32f.glsl");
         ApplyForceEmitterPipeline = CreateComputePipeline("res://addons/fluid_simulation/shaders/apply_force_emitter.glsl");
 
-        var texFormat = new RDTextureFormat();
-        texFormat.Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat;
-        texFormat.TextureType = RenderingDevice.TextureType.Type2D;
-        texFormat.Width = (uint)resolution.X;
-        texFormat.Height = (uint)resolution.Y;
-        texFormat.Mipmaps = 1;
-        texFormat.UsageBits =
+        // Simulation textures at simResolution
+        var simTexFormat = new RDTextureFormat();
+        simTexFormat.Format = RenderingDevice.DataFormat.R16G16B16A16Sfloat;
+        simTexFormat.TextureType = RenderingDevice.TextureType.Type2D;
+        simTexFormat.Width = (uint)simResolution.X;
+        simTexFormat.Height = (uint)simResolution.Y;
+        simTexFormat.Mipmaps = 1;
+        simTexFormat.UsageBits =
             RenderingDevice.TextureUsageBits.SamplingBit |
             RenderingDevice.TextureUsageBits.StorageBit |
             RenderingDevice.TextureUsageBits.CanCopyToBit |
             RenderingDevice.TextureUsageBits.CanUpdateBit;
 
-        TexIdVelocity = CreateTexture(texFormat, clearColor);
-        TexIdPressure = CreateTexture(texFormat, clearColor);
-        TexIdColor = CreateTexture(texFormat, clearColor);
-        TexIdDivergence = CreateTexture(texFormat, clearColor);
-        TexIdInputForces = CreateTexture(texFormat, clearColor);
-        TexIdInputColors = CreateTexture(texFormat, clearColor);
-        TexIdTemp = CreateTexture(texFormat, clearColor);
-        TexIdObstacle = CreateTexture(texFormat, clearColor);
-        TexIdObstaclePre = CreateTexture(texFormat, clearColor);
+        TexIdVelocity = CreateTexture(simTexFormat, clearColor);
+        TexIdPressure = CreateTexture(simTexFormat, clearColor);
+        TexIdDivergence = CreateTexture(simTexFormat, clearColor);
+        TexIdCurl = CreateTexture(simTexFormat, clearColor);
+        TexIdInputForces = CreateTexture(simTexFormat, clearColor);
+        TexIdTemp = CreateTexture(simTexFormat, clearColor);
 
-        if (subtractiveMixing)
-        {
-            Device.TextureClear(TexIdColor, new Color(1, 1, 1), 0, 1, 0, 1);
-            Device.TextureClear(TexIdTemp, new Color(1, 1, 1), 0, 1, 0, 1);
-        }
+        // Dye/color textures at dyeResolution
+        var dyeTexFormat = new RDTextureFormat();
+        dyeTexFormat.Format = RenderingDevice.DataFormat.R16G16B16A16Sfloat;
+        dyeTexFormat.TextureType = RenderingDevice.TextureType.Type2D;
+        dyeTexFormat.Width = (uint)dyeResolution.X;
+        dyeTexFormat.Height = (uint)dyeResolution.Y;
+        dyeTexFormat.Mipmaps = 1;
+        dyeTexFormat.UsageBits =
+            RenderingDevice.TextureUsageBits.SamplingBit |
+            RenderingDevice.TextureUsageBits.StorageBit |
+            RenderingDevice.TextureUsageBits.CanCopyToBit |
+            RenderingDevice.TextureUsageBits.CanUpdateBit;
+
+        TexIdColor = CreateTexture(dyeTexFormat, clearColor);
+        TexIdInputColors = CreateTexture(dyeTexFormat, clearColor);
+        TexIdTempDye = CreateTexture(dyeTexFormat, clearColor);
+        TexIdDisplayOutput = CreateTexture(dyeTexFormat, clearColor);
+
+        // Obstacle textures use rgba32f at simResolution for precise velocity encoding
+        var obsFormat = new RDTextureFormat();
+        obsFormat.Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat;
+        obsFormat.TextureType = RenderingDevice.TextureType.Type2D;
+        obsFormat.Width = (uint)simResolution.X;
+        obsFormat.Height = (uint)simResolution.Y;
+        obsFormat.Mipmaps = 1;
+        obsFormat.UsageBits =
+            RenderingDevice.TextureUsageBits.SamplingBit |
+            RenderingDevice.TextureUsageBits.StorageBit |
+            RenderingDevice.TextureUsageBits.CanCopyToBit |
+            RenderingDevice.TextureUsageBits.CanUpdateBit;
+
+        TexIdObstacle = CreateTexture(obsFormat, clearColor);
+        TexIdObstaclePre = CreateTexture(obsFormat, clearColor);
 
         var samplerState = new RDSamplerState();
         samplerState.MinFilter = RenderingDevice.SamplerFilter.Linear;
@@ -191,9 +236,13 @@ public class GPUResourceManager
         TexIdPressure = FreeRid(TexIdPressure);
         TexIdColor = FreeRid(TexIdColor);
         TexIdDivergence = FreeRid(TexIdDivergence);
+        TexIdCurl = FreeRid(TexIdCurl);
         TexIdInputForces = FreeRid(TexIdInputForces);
         TexIdInputColors = FreeRid(TexIdInputColors);
         TexIdTemp = FreeRid(TexIdTemp);
+        TexIdTempDye = FreeRid(TexIdTempDye);
+        TexIdDisplayOutput = FreeRid(TexIdDisplayOutput);
+
         TexIdObstacle = FreeRid(TexIdObstacle);
         TexIdObstaclePre = FreeRid(TexIdObstaclePre);
 
@@ -201,6 +250,9 @@ public class GPUResourceManager
         ForceEmitterBuffer = FreeRid(ForceEmitterBuffer);
 
         FreePipeline(AdvectPipeline);
+        FreePipeline(CurlPipeline);
+        FreePipeline(ClearPipeline);
+        FreePipeline(DisplayPipeline);
         FreePipeline(JacobiPipeline);
         FreePipeline(ApplyForcesPipeline);
         FreePipeline(ApplyColorsPipeline);
@@ -211,9 +263,8 @@ public class GPUResourceManager
         FreePipeline(VorticityPipeline);
         FreePipeline(ObstacleForcePipeline);
         FreePipeline(SplatPipeline);
-        FreePipeline(SplatColorPipeline);
-        FreePipeline(SplatBatchPipeline);
         FreePipeline(CopyTexturePipeline);
+        FreePipeline(CopyTextureRgba32fPipeline);
         FreePipeline(ApplyForceEmitterPipeline);
     }
 
@@ -385,5 +436,6 @@ public class GPUResourceManager
         Device.TextureClear(TexIdPressure, new Color(0, 0, 0), 0, 1, 0, 1);
         Device.TextureClear(TexIdColor, clearColor, 0, 1, 0, 1);
         Device.TextureClear(TexIdDivergence, new Color(0, 0, 0), 0, 1, 0, 1);
+        Device.TextureClear(TexIdCurl, new Color(0, 0, 0), 0, 1, 0, 1);
     }
 }

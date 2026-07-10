@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://cl3y6g3g2uasp"
+path="res://.godot/imported/copy_texture_rgba32f.glsl-2d5e8e9c4cec17c141ee70424866e5c3.res"
+
+[deps]
+
+source_file="res://addons/fluid_simulation/shaders/copy_texture_rgba32f.glsl"
+dest_files=["res://.godot/imported/copy_texture_rgba32f.glsl-2d5e8e9c4cec17c141ee70424866e5c3.res"]
+
+[params]
+

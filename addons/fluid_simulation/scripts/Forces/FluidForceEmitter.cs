@@ -5,8 +5,7 @@ namespace FluidSimulation;
 /// <summary>
 ///     力发射器节点，负责向流体模拟施加方向性的外力。
 ///     <para>
-///         支持五种力模式（固定方向、点辐射、旋涡、向心、离心）、五种作用形状（点、圆、矩形、线段、纹理遮罩）、
-///         以及六种预设效果（风、重力、旋涡、爆炸、磁场）。
+///         支持五种力模式（固定方向、点辐射、旋涡、向心、离心）、五种作用形状（点、圆、矩形、线段、纹理遮罩）。
 ///     </para>
 ///     <para>
 ///         优化说明：非 TextureMask 形状使用 GPU 并行计算力场，彻底消除 CPU 端逐像素 GetPixel/SetPixel 瓶颈。
@@ -16,23 +15,8 @@ namespace FluidSimulation;
 [GlobalClass]
 public partial class FluidForceEmitter : Node2D
 {
-    private ForcePreset _preset = ForcePreset.Custom;
-
     /// <summary>检测到的碰撞范围形状，由 _Ready 时自动从子节点中查找。</summary>
     public CollisionShape2D RangeShape { get; set; }
-
-    /// <summary>力发射器预设，选择后自动填充力参数。设为 Custom 时保留当前参数不做修改。</summary>
-    [Export]
-    public ForcePreset Preset
-    {
-        get => _preset;
-        set
-        {
-            _preset = value;
-            if (_preset != ForcePreset.Custom)
-                ApplyPreset(_preset);
-        }
-    }
 
     /// <summary>是否激活力发射器。为 false 时停止施加力。</summary>
     [Export]
@@ -264,60 +248,6 @@ public partial class FluidForceEmitter : Node2D
         
         var pixel = image.GetPixel(texX, texY);
         return pixel.A > 0.01f;
-    }
-
-    // ======================== 预设配置 ========================
-
-    public void ApplyPreset(ForcePreset preset)
-    {
-        switch (preset)
-        {
-            case ForcePreset.Wind:
-                ForcePatternType = ForcePattern.Directional;
-                Force = new Vector2(5f, 0f);
-                ForceRadius = 200f;
-                EmissionShapeType = EmissionShape.Rect;
-                ShapeSize = new Vector2(5f, 2f);
-                FalloffExponent = 1f;
-                SwirlStrength = 0f;
-                break;
-            case ForcePreset.Gravity:
-                ForcePatternType = ForcePattern.Directional;
-                Force = new Vector2(0f, 3f);
-                ForceRadius = 500f;
-                EmissionShapeType = EmissionShape.Rect;
-                ShapeSize = new Vector2(10f, 10f);
-                FalloffExponent = 0f;
-                SwirlStrength = 0f;
-                break;
-            case ForcePreset.Vortex:
-                ForcePatternType = ForcePattern.Vortex;
-                Force = new Vector2(1f, 0f);
-                ForceRadius = 150f;
-                EmissionShapeType = EmissionShape.Circle;
-                ShapeSize = new Vector2(1.5f, 1.5f);
-                FalloffExponent = 1f;
-                SwirlStrength = 2f;
-                break;
-            case ForcePreset.Explosion:
-                ForcePatternType = ForcePattern.Repulsor;
-                Force = new Vector2(10f, 0f);
-                ForceRadius = 200f;
-                EmissionShapeType = EmissionShape.Circle;
-                ShapeSize = new Vector2(2f, 2f);
-                FalloffExponent = 3f;
-                SwirlStrength = 0f;
-                break;
-            case ForcePreset.Magnetic:
-                ForcePatternType = ForcePattern.Attractor;
-                Force = new Vector2(5f, 0f);
-                ForceRadius = 250f;
-                EmissionShapeType = EmissionShape.Circle;
-                ShapeSize = new Vector2(2.5f, 2.5f);
-                FalloffExponent = 1.5f;
-                SwirlStrength = 0.5f;
-                break;
-        }
     }
 
     // ======================== 生命周期 ========================

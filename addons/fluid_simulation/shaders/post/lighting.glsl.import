@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://cst0i2sr6bpk0"
+path="res://.godot/imported/lighting.glsl-62d2316eee6cc2b8d44da7711ba4db68.res"
+
+[deps]
+
+source_file="res://addons/fluid_simulation/shaders/post/lighting.glsl"
+dest_files=["res://.godot/imported/lighting.glsl-62d2316eee6cc2b8d44da7711ba4db68.res"]
+
+[params]
+

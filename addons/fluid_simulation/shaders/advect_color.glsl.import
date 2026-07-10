@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://cx65o1sepvuut"
+path="res://.godot/imported/advect_color.glsl-0756ccbf567dfccc2c5e7da9f2691096.res"
+
+[deps]
+
+source_file="res://addons/fluid_simulation/shaders/advect_color.glsl"
+dest_files=["res://.godot/imported/advect_color.glsl-0756ccbf567dfccc2c5e7da9f2691096.res"]
+
+[params]
+
