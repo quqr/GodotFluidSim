@@ -75,6 +75,12 @@ _data = {
 &"RESET": SubResource("Animation_10thg")
 }
 
+[sub_resource type="Environment" id="Environment_c5dtt"]
+background_mode = 3
+glow_enabled = true
+glow_strength = 1.5
+glow_bloom = 0.1
+
 [node name="WorldFluidTest" type="Node2D" unique_id=1319974097 node_paths=PackedStringArray("Camera", "FluidDisplay", "FluidDomain", "FluidSim")]
 script = ExtResource("1_world")
 Camera = NodePath("Player/Camera2D")
@@ -261,3 +267,6 @@ libraries/ = SubResource("AnimationLibrary_10thg")
 autoplay = &"Move"
 
 [node name="Node" type="Node" parent="." unique_id=2084791540]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1709636120]
+environment = SubResource("Environment_c5dtt")
