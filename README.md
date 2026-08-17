@@ -1,6 +1,8 @@
 # fluid-simulation - 2D 流体模拟插件
 
-基于 Godot 4.6 的实时 2D 流体模拟插件，使用 GPU Compute Shader 实现高性能流体效果。
+基于 Godot 4.6 的实时 2D 流体模拟插件，使用 GPU Compute Shader 实现流体效果。
+
+https://github.com/user-attachments/assets/a6270cdd-6036-4ba4-8051-58c2f97aa230
 
 ## 特性
 
