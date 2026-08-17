@@ -79,7 +79,6 @@ _data = {
 background_mode = 3
 glow_enabled = true
 glow_strength = 1.5
-glow_bloom = 0.1
 
 [node name="WorldFluidTest" type="Node2D" unique_id=1319974097 node_paths=PackedStringArray("Camera", "FluidDisplay", "FluidDomain", "FluidSim")]
 script = ExtResource("1_world")

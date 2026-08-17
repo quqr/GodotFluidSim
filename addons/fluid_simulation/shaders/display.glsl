@@ -1,4 +1,4 @@
-// Display — WFS displayShaderSource (SHADING only, no bloom/sunrays).
+// Display — WFS displayShaderSource (SHADING only).
 // Computes normals from the dye field's length gradient and applies diffuse lighting.
 // alpha = max(r, max(g, b)) for transparency compositing.
 #[compute]
